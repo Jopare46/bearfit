@@ -49,3 +49,4 @@ Features in v1
 - Full JSON backup / restore
 - Training CSV export
 - Offline support after first successful HTTPS load
+- BearFit deployment
