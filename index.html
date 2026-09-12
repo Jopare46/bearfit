@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#151515" />
+  <meta name="description" content="BearFit Local - private workout and food tracker" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/bearfit-192.png" />
+  <link rel="apple-touch-icon" href="icons/bearfit-192.png" />
+  <link rel="stylesheet" href="styles.css" />
+  <title>BearFit Local</title>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">BEARFIT LOCAL</div>
+        <h1>Train. Log. Progress.</h1>
+      </div>
+      <button class="icon-btn" id="backupBtn" aria-label="Backup and restore">⋮</button>
+    </header>
+
+    <main>
+      <section id="trainView" class="view active"></section>
+      <section id="foodView" class="view"></section>
+      <section id="progressView" class="view"></section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="Main navigation">
+      <button class="nav-btn active" data-view="trainView"><span>🏋️</span>TRAIN</button>
+      <button class="nav-btn" data-view="foodView"><span>🍽️</span>FOOD</button>
+      <button class="nav-btn" data-view="progressView"><span>📈</span>PROGRESS</button>
+    </nav>
+  </div>
+
+  <dialog id="backupDialog">
+    <form method="dialog" class="dialog-card">
+      <div class="dialog-head">
+        <h2>Backup & Restore</h2>
+        <button class="icon-btn" value="cancel">×</button>
+      </div>
+      <p class="muted">Your data stays on this device unless you export it.</p>
+      <button type="button" class="primary wide" id="exportJsonBtn">Export full backup</button>
+      <button type="button" class="secondary wide" id="exportCsvBtn">Export training CSV</button>
+      <label class="secondary wide file-label">Import backup<input id="importJsonInput" type="file" accept="application/json" hidden></label>
+      <button type="button" class="danger-text" id="resetBtn">Reset BearFit data</button>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "name":"BearFit Local",
+  "short_name":"BearFit",
+  "start_url":"./",
+  "display":"standalone",
+  "background_color":"#101010",
+  "theme_color":"#151515",
+  "description":"Private offline workout and food tracker",
+  "icons":[
+    {"src":"icons/bearfit-192.png","sizes":"192x192","type":"image/png"},
+    {"src":"icons/bearfit-512.png","sizes":"512x512","type":"image/png"}
+  ]
+}
