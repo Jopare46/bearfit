@@ -50,6 +50,10 @@ function recentLogs(name){return state.setLogs.filter(x=>x.exerciseName===name).
 function latestWeight(name){const x=recentLogs(name).find(x=>Number.isFinite(x.weight));return x?x.weight:''}
 function latestSet(name){return recentLogs(name)[0]||null}
 function dayDraftKey(day,exId,setNo){return `${isoDate()}|${day}|${exId}|${setNo}`}
+function formatDateLong(dateStr){const d=new Date(`${dateStr}T12:00:00`);return d.toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short',year:'numeric'})}
+function formatNumber(n){return new Intl.NumberFormat(undefined,{maximumFractionDigits:1}).format(n||0)}
+function sessionSets(session){if(Array.isArray(session.sets))return session.sets;return state.setLogs.filter(x=>x.date===session.date&&x.workoutDay===session.workoutDay)}
+function sessionStats(session){const logs=sessionSets(session);const totalReps=logs.reduce((sum,x)=>sum+(Number(x.reps)||0),0);const volume=logs.reduce((sum,x)=>sum+((Number(x.weight)||0)*(Number(x.reps)||0)),0);const exerciseCount=new Set(logs.map(x=>x.exerciseName)).size;return {logs,totalReps,volume,exerciseCount,setCount:logs.length}}
 
 function showView(id){currentView=id;document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===id));document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===id));render()}
 function render(){if(currentView==='trainView')renderTrain();if(currentView==='foodView')renderFood();if(currentView==='progressView')renderProgress()}
@@ -74,6 +78,8 @@ function renderTrain(){
  root.querySelectorAll('.set-input').forEach(i=>i.onchange=()=>saveDraftFromInput(i));
  root.querySelectorAll('[data-move]').forEach(b=>b.onclick=()=>moveExercise(b.dataset.id,Number(b.dataset.move)));
  root.querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>removeExercise(b.dataset.remove));
+ root.querySelectorAll('[data-sets-delta]').forEach(b=>b.onclick=()=>adjustExerciseSets(b.dataset.id,Number(b.dataset.setsDelta)));
+ root.querySelectorAll('[data-edit-details]').forEach(b=>b.onclick=()=>editExerciseDetails(b.dataset.editDetails));
 }
 function exerciseCard(ex,idx){
  const last=latestSet(ex.name);const prev=last?`Previous: ${last.weight??'—'} kg × ${last.reps??'—'} reps`:'No previous log yet';
@@ -84,11 +90,40 @@ function exerciseCard(ex,idx){
   const reps=draft.reps ?? logged?.reps ?? '';
   sets+=`<div class="set-grid"><div class="set-num">${s}</div><input class="set-input" data-key="${key}" data-field="weight" inputmode="decimal" type="number" step="0.5" value="${weight??''}" aria-label="Set ${s} weight"><input class="set-input" data-key="${key}" data-field="reps" inputmode="numeric" type="number" step="1" value="${reps??''}" aria-label="Set ${s} reps"><button class="check-set ${logged?'done':''}" data-id="${ex.id}" data-set="${s}">${logged?'✓':'○'}</button></div>`;
  }
- return `<div class="exercise-card"><div class="row between"><div><div class="exercise-title">${escapeHtml(ex.name)}</div><div class="target">${ex.sets} sets · ${escapeHtml(ex.reps)} · ${escapeHtml(ex.suggested)}</div></div>${editMode?`<div class="edit-tools"><button class="mini" data-id="${ex.id}" data-move="-1">↑</button><button class="mini" data-id="${ex.id}" data-move="1">↓</button><button class="mini remove" data-remove="${ex.id}">Remove</button></div>`:''}</div><div class="previous">${escapeHtml(prev)}</div>${ex.notes?`<div class="small muted" style="margin-bottom:10px">${escapeHtml(ex.notes)}</div>`:''}<div class="set-grid set-head"><div>SET</div><div>KG</div><div>REPS</div><div>DONE</div></div>${sets}</div>`
+ const editTools=editMode?`<div class="edit-tools"><button class="mini" data-id="${ex.id}" data-move="-1">↑</button><button class="mini" data-id="${ex.id}" data-move="1">↓</button><button class="mini" data-edit-details="${ex.id}">Edit details</button><button class="mini remove" data-remove="${ex.id}">Remove</button></div>`:'';
+ return `<div class="exercise-card"><div class="exercise-head"><div class="exercise-main"><div class="exercise-title">${escapeHtml(ex.name)}</div><div class="target">${escapeHtml(ex.reps)} · ${escapeHtml(ex.suggested)}</div></div><div class="set-count-control" aria-label="Change number of sets"><button class="set-count-btn" data-id="${ex.id}" data-sets-delta="-1" aria-label="Remove one set">−</button><span><strong>${ex.sets}</strong><small>SETS</small></span><button class="set-count-btn" data-id="${ex.id}" data-sets-delta="1" aria-label="Add one set">+</button></div></div>${editTools}<div class="previous">${escapeHtml(prev)}</div>${ex.notes?`<div class="small muted" style="margin-bottom:10px">${escapeHtml(ex.notes)}</div>`:''}<div class="set-grid set-head"><div>SET</div><div>KG</div><div>REPS</div><div>DONE</div></div>${sets}</div>`
 }
 async function saveDraftFromInput(input){const key=input.dataset.key;state.draftSets[key]=state.draftSets[key]||{};state.draftSets[key][input.dataset.field]=input.value===''?'':Number(input.value);await saveState()}
 async function saveSetFromRow(btn){const ex=state.program[selectedDay].find(e=>e.id===btn.dataset.id);const setNo=Number(btn.dataset.set);const key=dayDraftKey(selectedDay,ex.id,setNo);const row=btn.parentElement;const inputs=row.querySelectorAll('input');const weight=inputs[0].value===''?null:Number(inputs[0].value);const reps=inputs[1].value===''?null:Number(inputs[1].value);const existingIndex=state.setLogs.findIndex(x=>x.date===isoDate()&&x.workoutDay===selectedDay&&x.exerciseId===ex.id&&x.setNumber===setNo);if(existingIndex>=0){state.setLogs.splice(existingIndex,1);btn.classList.remove('done');btn.textContent='○';toast('Set removed');}else{state.setLogs.push({id:crypto.randomUUID(),date:isoDate(),timestamp:new Date().toISOString(),workoutDay:selectedDay,exerciseId:ex.id,exerciseName:ex.name,setNumber:setNo,weight,reps});btn.classList.add('done');btn.textContent='✓';toast('Set saved');}await saveState()}
-async function finishWorkout(){const today=isoDate();const count=state.setLogs.filter(x=>x.date===today&&x.workoutDay===selectedDay).length;state.sessions.push({id:crypto.randomUUID(),date:today,timestamp:new Date().toISOString(),workoutDay:selectedDay,setCount:count});await saveState();toast(`${selectedDay} workout saved`);renderProgress()}
+async function finishWorkout(){
+ const today=isoDate();
+ const logs=state.setLogs.filter(x=>x.date===today&&x.workoutDay===selectedDay).sort((a,b)=>a.timestamp.localeCompare(b.timestamp));
+ if(!logs.length){toast('Log at least one set first');return}
+ const firstTime=logs[0]?.timestamp?new Date(logs[0].timestamp).getTime():Date.now();
+ const durationMinutes=Math.max(1,Math.round((Date.now()-firstTime)/60000));
+ const session={id:crypto.randomUUID(),date:today,timestamp:new Date().toISOString(),workoutDay:selectedDay,workoutTitle:workoutTitles[selectedDay]||'Workout',setCount:logs.length,durationMinutes,sets:logs.map(x=>({...x}))};
+ state.sessions.push(session);
+ await saveState();
+ toast(`${selectedDay} workout saved`);
+ showWorkoutReport(session.id);
+}
+async function adjustExerciseSets(id,delta){
+ const ex=state.program[selectedDay].find(e=>e.id===id);if(!ex)return;
+ const next=Math.max(1,ex.sets+delta);if(next===ex.sets)return;
+ if(next<ex.sets){
+  const todayLogs=state.setLogs.filter(x=>x.date===isoDate()&&x.workoutDay===selectedDay&&x.exerciseId===id);
+  const highest=todayLogs.reduce((m,x)=>Math.max(m,Number(x.setNumber)||0),0);
+  if(highest>next){toast(`Set ${highest} is already logged. Remove it first.`);return}
+ }
+ ex.sets=next;await saveState();renderTrain();toast(`${ex.name}: ${ex.sets} sets`)
+}
+async function editExerciseDetails(id){
+ const ex=state.program[selectedDay].find(e=>e.id===id);if(!ex)return;
+ const reps=prompt('Target reps / time',ex.reps);if(reps===null)return;
+ const suggested=prompt('Suggested weight',ex.suggested);if(suggested===null)return;
+ const notes=prompt('Notes',ex.notes||'');if(notes===null)return;
+ ex.reps=reps||ex.reps;ex.suggested=suggested;ex.notes=notes;await saveState();renderTrain();toast('Exercise updated')
+}
 async function moveExercise(id,delta){const arr=state.program[selectedDay].filter(e=>e.active).sort((a,b)=>a.order-b.order);const i=arr.findIndex(e=>e.id===id),j=i+delta;if(i<0||j<0||j>=arr.length)return;const a=arr[i],b=arr[j];[a.order,b.order]=[b.order,a.order];await saveState();renderTrain()}
 async function removeExercise(id){const ex=state.program[selectedDay].find(e=>e.id===id);if(!ex)return;if(!confirm(`Remove ${ex.name} from ${selectedDay}? Your old logs will be kept.`))return;ex.active=false;await saveState();renderTrain()}
 async function addExerciseFlow(){const name=prompt('Exercise name');if(!name)return;const sets=Math.max(1,Number(prompt('How many sets?','3'))||3);const reps=prompt('Target reps','8–12')||'8–12';const suggested=prompt('Suggested starting weight','')||'';const maxOrder=Math.max(0,...state.program[selectedDay].map(e=>e.order||0));state.program[selectedDay].push({id:crypto.randomUUID(),name,sets,reps,suggested,notes:'',order:maxOrder+1,active:true});await saveState();renderTrain();toast('Exercise added')}
@@ -106,12 +141,30 @@ async function editTargets(){const c=Number(prompt('Daily calorie target',state.
 
 function renderProgress(){
  const root=document.getElementById('progressView');const names=[...new Set(Object.values(state.program).flat().filter(x=>x.active).map(x=>x.name))].sort();const selected=root.dataset.exercise||names[0]||'';root.dataset.exercise=selected;const logs=recentLogs(selected);const last=logs[0];const best=logs.filter(x=>Number.isFinite(x.weight)).sort((a,b)=>(b.weight-a.weight)||((b.reps||0)-(a.reps||0)))[0];const bench=selected==='Flat Barbell Bench Press';const benchPct=bench&&best?.weight?Math.min(100,(best.weight/90)*100):0;
+ const sessions=[...(state.sessions||[])].sort((a,b)=>String(b.timestamp).localeCompare(String(a.timestamp))).slice(0,12);
  root.innerHTML=`<div class="hero"><div class="eyebrow">PROGRESS</div><h2>${escapeHtml(selected||'No exercise')}</h2><select id="progressExercise" style="margin-top:10px">${names.map(n=>`<option ${n===selected?'selected':''}>${escapeHtml(n)}</option>`).join('')}</select></div>
  <div class="metric-row"><div class="metric-card"><div class="muted small">LAST</div><div class="metric">${last?`${last.weight??'—'} kg`: '—'}</div><div class="small muted">${last?`${last.reps??'—'} reps`:'No data'}</div></div><div class="metric-card"><div class="muted small">BEST</div><div class="metric">${best?`${best.weight??'—'} kg`:'—'}</div><div class="small muted">${best?`${best.reps??'—'} reps`:'No data'}</div></div></div>
  ${bench?`<div class="card"><div class="row between"><strong>90 kg bench goal</strong><strong>${Math.round(benchPct)}%</strong></div><div class="progress-track" style="margin-top:10px"><div class="progress-fill" style="width:${benchPct}%"></div></div></div>`:''}
+ <div class="section-title"><h2>Completed workouts</h2></div><div class="card">${sessions.length?sessions.map(x=>{const stats=sessionStats(x);return `<div class="session-item"><div><strong>${escapeHtml(x.workoutDay)} · ${escapeHtml(x.workoutTitle||workoutTitles[x.workoutDay]||'Workout')}</strong><div class="small muted">${formatDateLong(x.date)} · ${stats.setCount} sets${x.durationMinutes?` · ${x.durationMinutes} min`:''}</div></div><button class="mini" data-report-session="${x.id}">View report</button></div>`}).join(''):'<div class="muted">Finish a workout to create your first report.</div>'}</div>
  <div class="section-title"><h2>Recent sets</h2></div><div class="card">${logs.length?logs.slice(0,25).map(x=>`<div class="history-item"><div>${x.date} · Set ${x.setNumber}</div><strong>${x.weight??'—'} kg × ${x.reps??'—'}</strong></div>`).join(''):'<div class="muted">No sets logged yet.</div>'}</div>`;
  root.querySelector('#progressExercise').onchange=e=>{root.dataset.exercise=e.target.value;renderProgress()};
+ root.querySelectorAll('[data-report-session]').forEach(b=>b.onclick=()=>showWorkoutReport(b.dataset.reportSession));
 }
+
+function workoutReportHtml(session){
+ const stats=sessionStats(session);const logs=stats.logs;
+ const order=[];const grouped={};
+ logs.forEach(x=>{if(!grouped[x.exerciseName]){grouped[x.exerciseName]=[];order.push(x.exerciseName)}grouped[x.exerciseName].push(x)});
+ const exercises=order.map(name=>`<section class="report-exercise"><div class="report-exercise-title">${escapeHtml(name)}</div><div class="report-sets">${grouped[name].sort((a,b)=>a.setNumber-b.setNumber).map(x=>`<span>Set ${x.setNumber}: <strong>${x.weight??'—'} kg × ${x.reps??'—'}</strong></span>`).join('')}</div></section>`).join('');
+ return `<article class="workout-report"><header class="report-header"><div><div class="report-brand">BEARFIT</div><div class="report-kicker">WORKOUT REPORT</div></div><div class="report-date">${escapeHtml(formatDateLong(session.date))}</div></header><div class="report-title-block"><h1>${escapeHtml(session.workoutDay)} — ${escapeHtml(session.workoutTitle||workoutTitles[session.workoutDay]||'Workout')}</h1>${session.durationMinutes?`<div>${session.durationMinutes} min session</div>`:''}</div><div class="report-metrics"><div><span>SETS</span><strong>${stats.setCount}</strong></div><div><span>REPS</span><strong>${stats.totalReps}</strong></div><div><span>VOLUME</span><strong>${formatNumber(stats.volume)} kg</strong></div><div><span>EXERCISES</span><strong>${stats.exerciseCount}</strong></div></div><div class="report-list">${exercises||'<p>No sets logged.</p>'}</div><footer class="report-footer">Generated by BearFit Local · ${new Date(session.timestamp||Date.now()).toLocaleString()}</footer></article>`
+}
+function reportShareText(session){
+ const stats=sessionStats(session);const lines=[`BEARFIT — ${session.workoutDay} ${session.workoutTitle||workoutTitles[session.workoutDay]||'Workout'}`,formatDateLong(session.date),`${stats.setCount} sets · ${stats.totalReps} reps · ${formatNumber(stats.volume)} kg volume`,''];
+ const grouped={};stats.logs.forEach(x=>{(grouped[x.exerciseName]??=[]).push(x)});Object.entries(grouped).forEach(([name,sets])=>lines.push(`${name}: ${sets.sort((a,b)=>a.setNumber-b.setNumber).map(x=>`${x.weight??'—'}kg×${x.reps??'—'}`).join(' | ')}`));return lines.join('\n')
+}
+function showWorkoutReport(sessionId){const session=(state.sessions||[]).find(x=>x.id===sessionId);if(!session){toast('Report not found');return}const dialog=document.getElementById('reportDialog');dialog.dataset.sessionId=session.id;document.getElementById('workoutReport').innerHTML=workoutReportHtml(session);dialog.showModal()}
+async function shareCurrentReport(){const id=document.getElementById('reportDialog').dataset.sessionId;const session=(state.sessions||[]).find(x=>x.id===id);if(!session)return;const text=reportShareText(session);try{if(navigator.share){await navigator.share({title:`BearFit ${session.workoutDay} workout`,text});}else{await navigator.clipboard.writeText(text);toast('Report copied to clipboard')}}catch(e){if(e?.name!=='AbortError'){try{await navigator.clipboard.writeText(text);toast('Report copied to clipboard')}catch{}}}}
+function printCurrentReport(){window.print()}
 
 function download(name,text,type='application/json'){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 function csvEscape(v){const s=String(v??'');return /[",\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s}
@@ -124,6 +177,7 @@ async function init(){
  state=await loadState();state.workoutSelection=state.workoutSelection||{};selectedDay=state.workoutSelection[isoDate()]||scheduledDay();
  document.querySelectorAll('.nav-btn').forEach(b=>b.onclick=()=>showView(b.dataset.view));
  const dialog=document.getElementById('backupDialog');document.getElementById('backupBtn').onclick=()=>dialog.showModal();document.getElementById('exportJsonBtn').onclick=exportJson;document.getElementById('exportCsvBtn').onclick=exportCsv;document.getElementById('importJsonInput').onchange=e=>e.target.files[0]&&importJson(e.target.files[0]);document.getElementById('resetBtn').onclick=resetAll;
+ const reportDialog=document.getElementById('reportDialog');document.getElementById('shareReportBtn').onclick=shareCurrentReport;document.getElementById('printReportBtn').onclick=printCurrentReport;document.getElementById('closeReportBtn').onclick=()=>reportDialog.close();
  if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
  render();
 }

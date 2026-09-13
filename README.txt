@@ -1,4 +1,4 @@
-BEARFIT LOCAL v1
+BEARFIT LOCAL v1.1
 ================
 
 What it is
@@ -41,12 +41,14 @@ Features in v1
 - Run any day's workout on any calendar day
 - Add, remove and reorder exercises
 - Record weight and reps for each set
+- Change the number of sets for any exercise at any time with +/- controls
 - Previous load automatically suggested from training history
 - Finish-workout history
+- Automatic completed-workout report with Share and Print / Save PDF
+- View and re-share previous workout reports from Progress
 - Daily calorie and protein targets
 - Food/calorie/protein logging
 - Bench progress reference against a 90 kg goal
 - Full JSON backup / restore
 - Training CSV export
 - Offline support after first successful HTTPS load
-- BearFit deployment

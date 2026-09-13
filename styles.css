@@ -26,3 +26,24 @@ dialog{border:0;border-radius:18px;background:transparent;color:var(--text);padd
 .toast{position:fixed;left:50%;bottom:94px;transform:translateX(-50%);background:#eee;color:#111;padding:10px 14px;border-radius:999px;font-weight:800;z-index:40;box-shadow:0 8px 30px rgba(0,0,0,.35)}
 .progress-track{height:14px;border-radius:999px;background:#2a2a2a;overflow:hidden}.progress-fill{height:100%;background:var(--text)}
 @media(min-width:650px){.view{padding-left:24px;padding-right:24px}.topbar{padding-left:28px;padding-right:28px}}
+
+
+/* BearFit v1.1 — live set count controls + shareable workout reports */
+.exercise-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.exercise-main{min-width:0;flex:1}
+.set-count-control{display:grid;grid-template-columns:34px 44px 34px;align-items:center;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#111;flex:0 0 auto}.set-count-btn{height:40px;border:0;background:#242424;color:var(--text);font-size:22px;font-weight:800}.set-count-btn:active{background:#3a3a3a}.set-count-control span{text-align:center;line-height:1;display:flex;flex-direction:column;gap:2px}.set-count-control strong{font-size:16px}.set-count-control small{font-size:8px;color:var(--muted);letter-spacing:.08em}
+.session-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}.session-item:last-child{border-bottom:0}
+.report-dialog{width:min(96vw,860px);max-width:860px}.report-dialog-card{background:#f7f7f5;color:#171717;border-radius:18px;overflow:hidden;max-height:92vh;overflow-y:auto}.report-actions{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;padding:12px;background:#151515;position:sticky;bottom:0}.workout-report{background:#f7f7f5;color:#171717;padding:30px;min-height:100%}.report-header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #171717;padding-bottom:14px}.report-brand{font-size:26px;font-weight:1000;letter-spacing:.06em}.report-kicker{font-size:10px;font-weight:800;letter-spacing:.2em;color:#666;margin-top:2px}.report-date{font-size:13px;color:#555;text-align:right}.report-title-block{padding:22px 0 12px}.report-title-block h1{font-size:28px;line-height:1.08;margin:0 0 6px}.report-title-block>div{color:#666;font-size:13px}.report-metrics{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid #d7d7d3;border-radius:12px;overflow:hidden;margin:8px 0 22px}.report-metrics>div{padding:12px;border-right:1px solid #d7d7d3}.report-metrics>div:last-child{border-right:0}.report-metrics span{display:block;font-size:9px;letter-spacing:.12em;color:#777;font-weight:800;margin-bottom:3px}.report-metrics strong{font-size:18px}.report-exercise{padding:13px 0;border-bottom:1px solid #deded9}.report-exercise-title{font-weight:900;font-size:16px;margin-bottom:7px}.report-sets{display:flex;flex-wrap:wrap;gap:7px}.report-sets span{background:#fff;border:1px solid #deded9;border-radius:8px;padding:7px 9px;font-size:12px}.report-footer{margin-top:24px;padding-top:12px;border-top:1px solid #d7d7d3;color:#777;font-size:10px;text-align:center}
+@media(max-width:520px){.report-actions{grid-template-columns:1fr 1fr}.report-actions .ghost{grid-column:1/-1}.workout-report{padding:20px}.report-title-block h1{font-size:23px}.report-metrics{grid-template-columns:1fr 1fr}.report-metrics>div:nth-child(2){border-right:0}.report-metrics>div:nth-child(-n+2){border-bottom:1px solid #d7d7d3}.exercise-head{align-items:center}.set-count-control{grid-template-columns:32px 40px 32px}}
+@media print{
+ @page{size:A4;margin:12mm}
+ html,body{background:#fff!important;color:#000!important}
+ body *{visibility:hidden!important}
+ #reportDialog,#reportDialog *{visibility:visible!important}
+ #reportDialog{position:absolute!important;inset:0!important;display:block!important;width:100%!important;max-width:none!important;height:auto!important;max-height:none!important;margin:0!important;padding:0!important;border:0!important;background:#fff!important;color:#000!important;overflow:visible!important}
+ #reportDialog::backdrop{display:none!important}
+ .report-dialog-card{max-height:none!important;overflow:visible!important;border-radius:0!important;background:#fff!important}
+ .workout-report{padding:0!important;background:#fff!important;color:#000!important}
+ .no-print{display:none!important}
+ .report-exercise{break-inside:avoid}
+ .report-footer{margin-top:16px}
+}
